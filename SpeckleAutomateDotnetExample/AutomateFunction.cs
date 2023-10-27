@@ -77,11 +77,11 @@ static class AutomateFunction
       automationContext.MarkRunFailed(
         $"Exceeded high density object limit with a value of {highDensityValue}"
       );
-      return;
     }
-
-    automationContext.MarkRunSuccess($"Finished density check.");
-    return;
+    else
+    {
+      automationContext.MarkRunSuccess($"Finished density check.");
+    }
   }
 
   /// <summary>
