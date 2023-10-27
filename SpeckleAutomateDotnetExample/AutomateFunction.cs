@@ -38,6 +38,7 @@ static class AutomateFunction
       {
         double avgDensity = TestDensityThreshold(displayable);
         densityThresholdDict.Add(displayable.id, avgDensity);
+        Console.WriteLine($"Object {displayable.id} has average density of {avgDensity}.");
       }
     }
 
