@@ -116,12 +116,15 @@ static class AutomateFunction
   /// <returns></returns>
   private static Base ColorizeDisplay(Base @base, RenderMaterial mat)
   {
-    IEnumerable<Base>? displayValues = @base.TryGetDisplayValue();
-    foreach (Base display in displayValues)
+    List<Mesh> displayValues = @base.TryGetDisplayValue()?.Cast<Mesh>()?.ToList();
+    if (displayValues != null)
     {
-      display["renderMaterial"] = mat;
+      foreach (Mesh display in displayValues)
+      {
+        display["renderMaterial"] = mat;
+      }
+      @base["displayValue"] = displayValues;
     }
-    @base["displayValue"] = displayValues;
     return @base;
   }
 
@@ -157,9 +160,6 @@ static class AutomateFunction
     {
       case Mesh o:
         return ComputeMeshDensity(o);
-
-      case Polyline o:
-        return ComputePolylineDensity(o);
 
       default:
         return 0;
@@ -206,28 +206,4 @@ static class AutomateFunction
     double area = mesh.area is 0 ? edgeLength : mesh.area;
     return count / area;
   }
-
-  /// <summary>
-  /// Computes the density of a polyline, defined as number of segments divided by length (polyline)
-  /// </summary>
-  /// <param name="line"></param>
-  /// <returns>The density of the polyline, or 0 if polyline had no length</returns>
-  private static double ComputePolylineDensity(Polyline polyline)
-  {
-    // calculate the number of segments
-    int count = (polyline.value.Count / 3) - 1;
-
-    return polyline.length != 0 ? count / polyline.length : 0;
-  }
-
-  /*
-  private static async int AlternativeFunction(
-    Base commitBase,
-    FunctionInputs functionInputs
-  )
-  {
-    // count the number of walls in your commit
-    // calculate total volume
-  }
-  */
 }
