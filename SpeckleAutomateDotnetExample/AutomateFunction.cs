@@ -5,6 +5,7 @@ using Speckle.Core.Logging;
 using Speckle.Core.Models.Extensions;
 using Speckle.Core.Models;
 using System.Runtime.CompilerServices;
+using Objects.Other;
 
 static class AutomateFunction
 {
@@ -39,7 +40,7 @@ static class AutomateFunction
     {
       if (!densityThresholdDict.ContainsKey(displayable.id))
       {
-        double avgDensity = TestDensityThreshold(displayable);
+        double avgDensity = GetAverageDensity(displayable);
         densityThresholdDict.Add(displayable.id, avgDensity);
       }
     }
@@ -48,9 +49,15 @@ static class AutomateFunction
       Console.WriteLine($"Object {entry.Key} has average density of {entry.Value}.");
     }
 
-    // flag any failed objects in the commit, and create a new commit
-    foreach (Base @base in displayableObjects)
+    // flag any failed objects in the commit, and set their display to red
+    var failedMat = new RenderMaterial();
+    failedMat.diffuseColor = System.Drawing.Color.Red;
+    var succeededMat = new RenderMaterial();
+    succeededMat.diffuseColor = System.Drawing.Color.Gray;
+    succeededMat.opacity = 0.5;
+    for (int i = 0; i < displayableObjects.Count(); i++)
     {
+      var @base = displayableObjects[i];
       if (@base.id != null && densityThresholdDict.ContainsKey(@base.id))
       {
         double avgDensity = densityThresholdDict[@base.id];
@@ -61,6 +68,12 @@ static class AutomateFunction
             new[] { @base.id },
             $"This object with average density of {avgDensity} exceeded threshold."
           );
+
+          displayableObjects[i] = ColorizeDisplay(@base, failedMat);
+        }
+        else
+        {
+          displayableObjects[i] = ColorizeDisplay(@base, succeededMat);
         }
       }
     }
@@ -82,14 +95,42 @@ static class AutomateFunction
     {
       automationContext.MarkRunSuccess($"Finished density check.");
     }
+
+    // Extra: create a new commit with the display objects
+    Collection newCommit = new();
+    newCommit.elements = displayableObjects;
+    newCommit.name = "Density Check Report";
+    string branch = "automations";
+    var result = await automationContext.CreateNewVersionInProject(
+      newCommit,
+      branch,
+      "Created density checker report"
+    );
+    Console.WriteLine($"Created new commit in branch: {branch}");
   }
 
   /// <summary>
-  ///
+  /// Adds a red render material to the base display objects
   /// </summary>
   /// <param name="base"></param>
   /// <returns></returns>
-  private static double TestDensityThreshold(Base @base)
+  private static Base ColorizeDisplay(Base @base, RenderMaterial mat)
+  {
+    IEnumerable<Base>? displayValues = @base.TryGetDisplayValue();
+    foreach (Base display in displayValues)
+    {
+      display["renderMaterial"] = mat;
+    }
+    @base["displayValue"] = displayValues;
+    return @base;
+  }
+
+  /// <summary>
+  /// Calculate the average density of the base
+  /// </summary>
+  /// <param name="base"></param>
+  /// <returns></returns>
+  private static double GetAverageDensity(Base @base)
   {
     IEnumerable<Base>? displayValues = @base.TryGetDisplayValue();
     double totalDensity = 0;
