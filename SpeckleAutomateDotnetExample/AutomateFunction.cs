@@ -67,9 +67,11 @@ static class AutomateFunction
 
     // test for automation failure
     int failedCount = densityThresholdDict
-      .Where(o => o.Value >= functionInputs.DensityThreshold)
+      .Where(o => o.Value > functionInputs.DensityThreshold)
       .Count();
-    double highDensityValue = failedCount / displayableObjects.Count();
+    double highDensityValue =
+      Convert.ToDouble(failedCount) / Convert.ToDouble(displayableObjects.Count());
+    Console.WriteLine($"High density % is {highDensityValue}.");
     if (highDensityValue > functionInputs.HighDensityObjectLimit)
     {
       automationContext.MarkRunFailed(
@@ -78,7 +80,7 @@ static class AutomateFunction
       return;
     }
 
-    automationContext.MarkRunSuccess($"Created new density commit objects");
+    automationContext.MarkRunSuccess($"Finished density check.");
     return;
   }
 
