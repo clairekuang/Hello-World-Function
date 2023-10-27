@@ -38,8 +38,11 @@ static class AutomateFunction
       {
         double avgDensity = TestDensityThreshold(displayable);
         densityThresholdDict.Add(displayable.id, avgDensity);
-        Console.WriteLine($"Object {displayable.id} has average density of {avgDensity}.");
       }
+    }
+    foreach (var entry in densityThresholdDict)
+    {
+      Console.WriteLine($"Object {entry.Key} has average density of {entry.Value}.");
     }
 
     // flag any failed objects in the commit, and create a new commit
