@@ -28,6 +28,7 @@ static class AutomateFunction
       automationContext.MarkRunFailed("No displayable objects with valid ids found.");
       return;
     }
+    Console.WriteLine($"Found {displayableObjects.Count()} displayable objects.");
 
     // store the density check result of each object
     Dictionary<string, double> densityThresholdDict = new();
