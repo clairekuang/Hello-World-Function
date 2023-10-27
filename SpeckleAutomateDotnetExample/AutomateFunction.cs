@@ -26,25 +26,18 @@ static class AutomateFunction
     if (!displayableObjects.Any())
     {
       automationContext.MarkRunFailed("No displayable objects with valid ids found.");
+      return;
     }
 
     // store the density check result of each object
-    Dictionary<string, bool> densityThresholdDict = new();
+    Dictionary<string, double> densityThresholdDict = new();
     foreach (Base displayable in displayableObjects)
     {
       if (!densityThresholdDict.ContainsKey(displayable.id))
       {
-        bool passed = TestDensityThreshold(displayable, functionInputs.DensityThreshold);
-        densityThresholdDict.Add(displayable.id, passed);
+        double avgDensity = TestDensityThreshold(displayable);
+        densityThresholdDict.Add(displayable.id, avgDensity);
       }
-    }
-
-    // test for automation failure
-    int failedCount = densityThresholdDict.Where(o => !o.Value).Count();
-    double highDensityValue = failedCount / displayableObjects.Count();
-    if (highDensityValue > functionInputs.HighDensityObjectLimit)
-    {
-      automationContext.MarkRunFailed($"Exceeded high density object limit with a value of {highDensityValue}");
     }
 
     // flag any failed objects in the commit, and create a new commit
@@ -52,18 +45,29 @@ static class AutomateFunction
     {
       if (@base.id != null && densityThresholdDict.ContainsKey(@base.id))
       {
-        if (!densityThresholdDict[@base.id])
+        double avgDensity = densityThresholdDict[@base.id];
+        if (avgDensity > functionInputs.DensityThreshold)
         {
           automationContext.AttachErrorToObjects(
             "",
             new[] { @base.id },
-            $"This object exceeded display density threshold."
+            $"This object with average density of {avgDensity} exceeded threshold."
           );
         }
       }
     }
-   
+
+    // test for automation failure
+    int failedCount = densityThresholdDict.Where(o => o.Value >= functionInputs.DensityThreshold).Count();
+    double highDensityValue = failedCount / displayableObjects.Count();
+    if (highDensityValue > functionInputs.HighDensityObjectLimit)
+    {
+      automationContext.MarkRunFailed($"Exceeded high density object limit with a value of {highDensityValue}");
+      return;
+    }
+
     automationContext.MarkRunSuccess($"Created new density commit objects");
+    return;
   }
 
   /// <summary>
@@ -71,19 +75,18 @@ static class AutomateFunction
   /// </summary>
   /// <param name="base"></param>
   /// <returns></returns>
-  private static bool TestDensityThreshold(Base @base, double threshold)
+  private static double TestDensityThreshold(Base @base)
   {
     IEnumerable<Base>? displayValues = @base.TryGetDisplayValue();
+    double totalDensity = 0;
     if (displayValues != null)
     {
       foreach (Base displayValue in displayValues)
       {
-        double density = ComputeDensity(displayValue);
-        if (density == 0 || density < threshold)
-          return false;
+        totalDensity += ComputeDensity(displayValue);
       }
     }
-    return true;
+    return displayValues != null || displayValues.Count() != 0 ? totalDensity/displayValues.Count() : 0;
   }
   /// <summary>
   /// Computes the density of a base, defined as number of faces divided by area (mesh) or number of segments divided by length (polyline)
