@@ -22,7 +22,10 @@ static class AutomateFunction
     Console.WriteLine("Received version: " + commitObject);
 
     // flatten the received objects and filter by displayable objects with valid ids
-    List<Base> displayableObjects = commitObject.Flatten().Where(o => o.IsDisplayableObject() && !string.IsNullOrEmpty(o.id)).ToList();
+    List<Base> displayableObjects = commitObject
+      .Flatten()
+      .Where(o => o.IsDisplayableObject() && !string.IsNullOrEmpty(o.id))
+      .ToList();
     if (!displayableObjects.Any())
     {
       automationContext.MarkRunFailed("No displayable objects with valid ids found.");
@@ -63,11 +66,15 @@ static class AutomateFunction
     }
 
     // test for automation failure
-    int failedCount = densityThresholdDict.Where(o => o.Value >= functionInputs.DensityThreshold).Count();
+    int failedCount = densityThresholdDict
+      .Where(o => o.Value >= functionInputs.DensityThreshold)
+      .Count();
     double highDensityValue = failedCount / displayableObjects.Count();
     if (highDensityValue > functionInputs.HighDensityObjectLimit)
     {
-      automationContext.MarkRunFailed($"Exceeded high density object limit with a value of {highDensityValue}");
+      automationContext.MarkRunFailed(
+        $"Exceeded high density object limit with a value of {highDensityValue}"
+      );
       return;
     }
 
@@ -76,7 +83,7 @@ static class AutomateFunction
   }
 
   /// <summary>
-  /// 
+  ///
   /// </summary>
   /// <param name="base"></param>
   /// <returns></returns>
@@ -91,8 +98,11 @@ static class AutomateFunction
         totalDensity += ComputeDensity(displayValue);
       }
     }
-    return displayValues != null || displayValues.Count() != 0 ? totalDensity/displayValues.Count() : 0;
+    return displayValues != null || displayValues.Count() != 0
+      ? totalDensity / displayValues.Count()
+      : 0;
   }
+
   /// <summary>
   /// Computes the density of a base, defined as number of faces divided by area (mesh) or number of segments divided by length (polyline)
   /// </summary>
@@ -116,24 +126,42 @@ static class AutomateFunction
   /// <summary>
   /// Computes the density of a mesh, defined as number of faces divided by area
   /// </summary>
-  /// <param name="bases"></param>
-  /// <returns>The density of the mesh, or 0 if mesh had no area </returns>
+  /// <param name="mesh"></param>
+  /// <returns>The density of the mesh by area, or total edge length if area was 0</returns>
   private static double ComputeMeshDensity(Mesh mesh)
   {
-    // calculate number of mesh faces
+    // calculate number of mesh faces and total edge length
     var i = 0;
     int count = 0;
+    double edgeLength = 0;
+    List<Point> vertices = mesh.GetPoints();
     while (i < mesh.faces.Count)
     {
       var n = mesh.faces[i];
-      if (n < 3) n += 3; // 0 -> 3, 1 -> 4 to preserve backwards compatibility
+      if (n < 3)
+        n += 3; // 0 -> 3, 1 -> 4 to preserve backwards compatibility
+
+      // calculate edge length
+      for (int j = 1; j < n; j++)
+      {
+        edgeLength += vertices[mesh.faces[n + j]].DistanceTo(
+          vertices[mesh.faces[n + j + 1]]
+        );
+        if (j == n - 1)
+        {
+          edgeLength += vertices[mesh.faces[n + j + 1]].DistanceTo(
+            vertices[mesh.faces[n + 1]]
+          );
+        }
+      }
 
       count++;
       i += n + 1;
     }
 
-    // return density or 0 if area doesn't exist
-    return mesh.area != 0 ? count / mesh.area : 0;
+    // return density
+    double area = mesh.area is 0 ? edgeLength : mesh.area;
+    return count / area;
   }
 
   /// <summary>
@@ -144,7 +172,7 @@ static class AutomateFunction
   private static double ComputePolylineDensity(Polyline polyline)
   {
     // calculate the number of segments
-    int count = ( polyline.value.Count / 3 ) - 1;
+    int count = (polyline.value.Count / 3) - 1;
 
     return polyline.length != 0 ? count / polyline.length : 0;
   }
@@ -159,5 +187,4 @@ static class AutomateFunction
     // calculate total volume
   }
   */
-
 }
