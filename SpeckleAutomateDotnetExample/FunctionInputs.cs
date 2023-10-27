@@ -7,6 +7,23 @@ using System.ComponentModel.DataAnnotations;
 /// are valid and match the required schema.
 struct FunctionInputs
 {
+  /// <summary>
+  /// Set a density value as the threshold.
+  /// </summary>
+  /// <remarks>
+  /// Objects with densities exceeding this value will be highlighted.
+  /// </remarks>
   [Required]
-  public string SpeckleTypeToCount;
+  public double DensityThreshold;
+
+  /// <summary>
+  /// THe maximum percentage of objects to allow that exceed the DensityThreshold.
+  /// </summary>
+  /// <remarks>
+  /// Should be a value between [0,1].
+  /// For example, a value of 0.1 means up to 10% of the objects 
+  /// with a density exceeding the threshold will be tolerated.
+  /// </remarks>
+  [Required]
+  public double HighDensityObjectLimit;
 }
